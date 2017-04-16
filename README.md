@@ -21,9 +21,14 @@
                 }
             ],
             "require": {
-                    "bclibraries/primo-services" : "~0.5"
+                    "bclibraries/primo-services" : "~2.0",
+                    "php-http/guzzle6-adapter": "~1.1",
+                    "http-interop/http-factory-guzzle": "~1.0"
             }
         }
+
+   Note that Guzzle can be swapped with any other
+   [PSR-18 compatible HTTP client library](https://packagist.org/providers/psr/http-client-implementation).
     
 3. Install using `composer.phar`:
 
@@ -40,7 +45,7 @@
          $host = 'primo2.staging.hosted.exlibrisgroup.com'; //Your Primo host.
          $inst = 'BCL'; // Your Primo institution code.
          $primo = new PrimoServices($host, $inst);
-   
+
 ## Use
 
 ### Brief search

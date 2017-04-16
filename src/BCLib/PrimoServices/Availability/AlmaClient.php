@@ -3,15 +3,24 @@
 namespace BCLib\PrimoServices\Availability;
 
 use BCLib\PrimoServices\BibRecord;
-use Guzzle\Http\Client;
+use Http\Factory\Discovery\HttpClient;
+use Http\Factory\Discovery\HttpFactory;
+use Pimple\Container;
+use Psr\Http\Client\ClientInterface as HttpClientInterface;
+use Psr\Http\Message\RequestFactoryInterface;
+
 
 class AlmaClient implements AvailabilityClient
 {
-
     /**
-     * @var Client
+     * @var HttpClient
      */
     private $client;
+
+    /**
+     * @var RequestFactoryInterface
+     */
+    protected $requestFactory;
 
     /**
      * @var string Alma host name (e.g. 'alma.exlibris.com')
@@ -28,11 +37,17 @@ class AlmaClient implements AvailabilityClient
      */
     private $ava_map;
 
-    public function __construct(Client $client, $alma_host, $library)
+    public function __construct(
+        HttpClientInterface $client = null,
+        $alma_host,
+        $library,
+        RequestFactoryInterface $requestFactory = null
+    )
     {
-        $this->client = $client;
+        $this->client = $client ?: HttpClient::client();
         $this->alma_host = $alma_host;
         $this->library = $library;
+        $this->requestFactory = $requestFactory ?: HttpFactory::requestFactory();
 
         $this->ava_map = [
             'a' => 'institution',
@@ -52,7 +67,6 @@ class AlmaClient implements AvailabilityClient
     /**
      * @param \BCLib\PrimoServices\BibRecord[] $bib_records
      * @return \BCLib\PrimoServices\BibRecord[]
-     * @throws \Guzzle\Http\Exception\RequestException
      */
     public function checkAvailability(array $bib_records)
     {
@@ -152,7 +166,10 @@ class AlmaClient implements AvailabilityClient
     private function fetchAvailability(array $components)
     {
         $url = $this->buildUrl(array_keys($components));
-        $response = $this->client->get($url)->send();
-        return simplexml_load_string($response->getBody(true));
+
+        $request = $this->requestFactory->createRequest('GET', $url);
+        $response = $this->client->sendRequest($request);
+
+        return simplexml_load_string((string) $response->getBody());
     }
 }

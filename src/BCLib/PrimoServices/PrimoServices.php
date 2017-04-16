@@ -3,8 +3,11 @@
 namespace BCLib\PrimoServices;
 
 use Doctrine\Common\Cache\Cache as DoctrineCache;
-use Guzzle\Http\Client;
+use Http\Factory\Discovery\HttpClient;
+use Http\Factory\Discovery\HttpFactory;
 use Pimple\Container;
+use Psr\Http\Client\ClientInterface as HttpClientInterface;
+use Psr\Http\Message\RequestFactoryInterface;
 
 class PrimoServices extends Container
 {
@@ -15,6 +18,12 @@ class PrimoServices extends Container
      * @var Cache
      */
     private $_cache;
+
+    /**
+     * @var HttpClient
+     */
+    private $_httpClient;
+
     /**
      * @var string
      */
@@ -30,13 +39,17 @@ class PrimoServices extends Container
      * @param DoctrineCache $cache
      * @param string        $version
      * @param array         $ignore_errors
+     * @param HttpClientInterface    $httpClient
+     * @param RequestFactoryInterface $requestFactory
      */
     public function __construct(
         $host,
         $institution,
         DoctrineCache $cache = null,
         $version = '4.9',
-        array $ignore_errors = []
+        array $ignore_errors = [],
+        HttpClientInterface $httpClient = null,
+        RequestFactoryInterface $requestFactory = null
     ) {
         $this->_host = $host;
         $this->_institution = $institution;
@@ -46,7 +59,11 @@ class PrimoServices extends Container
             $this->_cache = new Cache($cache);
         }
 
+        $this->_httpClient = $httpClient ?: HttpClient::client();
+
         parent::__construct();
+
+        $this['request_factory'] = $requestFactory ?: HttpFactory::requestFactory();
 
         $this['pnx_translator'] = function () use ($version) {
             return new PNXTranslator($version);
@@ -211,9 +228,10 @@ class PrimoServices extends Container
 
     protected function _send($action, $query_string)
     {
-        $client = new Client();
-        $request = $client->get($this->url($action, $query_string));
-        return json_decode($request->send()->getBody());
+        $request = $this['request_factory']->createRequest('GET', $this->url($action, $query_string));
+        $response = $this->_httpClient->sendRequest($request);
+
+        return json_decode($response->getBody());
     }
 
     /**
