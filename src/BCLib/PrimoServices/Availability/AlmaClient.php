@@ -45,7 +45,12 @@ class AlmaClient implements AvailabilityClient
     )
     {
         $this->client = $client ?: HttpClient::client();
-        $this->alma_host = $alma_host;
+
+        if (strpos($alma_host, 'http://') === 0 || strpos($alma_host, 'https://') === 0) {
+            $this->alma_host = $alma_host;
+        } else {
+            $this->alma_host = 'http://' . $alma_host;
+        }
         $this->library = $library;
         $this->requestFactory = $requestFactory ?: HttpFactory::requestFactory();
 
@@ -104,7 +109,7 @@ class AlmaClient implements AvailabilityClient
                 'library' => $this->library
             ]
         );
-        return "http://{$this->alma_host}/view/publish_avail?$query";
+        return "{$this->alma_host}/view/publish_avail?$query";
     }
 
     /**
